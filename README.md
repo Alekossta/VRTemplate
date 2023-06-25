@@ -23,7 +23,5 @@ VR template for Unreal Engine 5.
 ## Install instructions
 
 1. git clone https://github.com/Alekossta/VRTemplate
-(optional)
-2. git lfs fetch 
-3. git lfs checkout
+2. launc .uproject file
 
