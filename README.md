@@ -32,5 +32,3 @@ VR template for Unreal Engine 5.
 - PlayerCharacter
     - PlayerCharacterVR
     - PlayerCharacterFPS (for testing)
-2. launc .uproject file
-
