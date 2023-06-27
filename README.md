@@ -25,6 +25,7 @@ VR template for Unreal Engine 5.
 ## Install instructions
 
 1. git clone https://github.com/Alekossta/VRTemplate
+<<<<<<< HEAD
 2. launch .uproject
 
 
@@ -33,4 +34,7 @@ VR template for Unreal Engine 5.
 - PlayerCharacter
     - PlayerCharacterVR
     - PlayerCharacterFPS (for testing)
+=======
+2. launc .uproject file
+>>>>>>> 09c273d24a476c643ebcf13161410a67edabc7a4
 
