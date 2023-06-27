@@ -3,18 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Character.h"
-#include "HandController.h"
+#include "PlayerCharacter.h"
 #include "InputAction.h"
-#include "VRCharacter.generated.h"
-
-UENUM()
-enum class EHand
-{
-	Right,
-	Left,
-	None
-};
+#include "PlayerCharacterVR.generated.h"
 
 UENUM()
 enum class EMovementWay
@@ -39,34 +30,54 @@ enum class EPose
 	Sitting
 };
 
+
 UCLASS()
-class VRTEMPLATE_API AVRCharacter : public ACharacter
+class VRTEMPLATE_API APlayerCharacterVR : public APlayerCharacter
 {
 	GENERATED_BODY()
 
-public:
-
-	UPROPERTY()
-	class AHandController* HandControllerRight;
-
-	UPROPERTY()
-	class AHandController* HandControllerLeft;
-
 protected:
+
+	// FUNCTIONS // 
+
 	virtual void BeginPlay() override;
 
-	AVRCharacter();
+	APlayerCharacterVR();
 
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-private:
+	void KeepCameraAndCapsuleTogether();
 
-	// COMPONENTS // 
+	virtual void SpawnHands() override;
 
-	UPROPERTY(VisibleAnywhere)
-	class UCameraComponent* VRCamera;
+	UFUNCTION()
+	void ThumbstickPressedLeft(const FInputActionValue& Value);
+
+	UFUNCTION()
+	void ThumbstickPressedRight(const FInputActionValue& Value);
+
+	UFUNCTION()
+	void ThumbstickReleasedLeft(const FInputActionValue& Value);
+
+	UFUNCTION()
+	void ThumbstickReleasedRight(const FInputActionValue& Value);
+
+	// Teleport
+	void Teleport();
+	void UpdateDestinationMarker();
+	bool FindTeleportDestination(TArray<FVector>& OutPath, FVector& OutLocation);
+	void UpdateSpline(const TArray<FVector>& Path);
+	void DrawTeleportPath(const TArray<FVector>& Path);
+	void FinishTeleport();
+
+	UFUNCTION()
+	void Rotate(const FInputActionValue& Value);
+
+	virtual void Move(const FInputActionValue& Value) override;
+
+	// COMPONENTS //
 
 	UPROPERTY(VisibleAnywhere)
 	class USceneComponent* VRRoot;
@@ -80,38 +91,9 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	class UStaticMeshComponent* DestinationMarker;
 
-	// FUNCTIONS //
+	// PROPERTIES //
 
-	void SpawnHands();
-
-	void KeepCameraAndCapsuleTogether();
-
-	void ThumbstickPressedLeft(const FInputActionValue& Value);
-	void ThumbstickPressedRight(const FInputActionValue& Value);
-	void ThumbstickReleasedLeft(const FInputActionValue& Value);
-	void ThumbstickReleasedRight(const FInputActionValue& Value);
-
-	// Teleport
-	void Teleport();
-	void UpdateDestinationMarker();
-	bool FindTeleportDestination(TArray<FVector>& OutPath, FVector& OutLocation);
-	void UpdateSpline(const TArray<FVector>& Path);
-	void DrawTeleportPath(const TArray<FVector>& Path);
-	void FinishTeleport();
-
-	// Walking
-	void Move(const FInputActionValue& Value);
-	void Rotate(const FInputActionValue& Value);
-
-	// PROPERTIES // 
-
-	UPROPERTY(EditDefaultsOnly, Category="Hands")
-	TSubclassOf<class AHandController> HandControllerClassL;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Hands")
-	TSubclassOf<class AHandController> HandControllerClassR;
-
-	UPROPERTY(EditDefaultsOnly, Category="Movement")
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
 	EPose Pose = EPose::Standing;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
@@ -123,22 +105,19 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Locomotion")
 	EWalkingOrientation WalkingOrientation;
 
-	EHand HandTryingToTeleport;
-
+	// how big is the projectile we are simulating
 	UPROPERTY(EditDefaultsOnly, Category = "Teleport")
-	float TeleportProjectileRadius; // how big is the projectile we are simulating
+	float TeleportProjectileRadius; 
 
 	UPROPERTY(EditDefaultsOnly, Category = "Teleport")
 	float TeleportProjectileSpeed;
 
+	// The time unreal lets the simulation of the projectile happen
 	UPROPERTY(EditDefaultsOnly, Category = "Teleport")
-	float TeleportSimulationTime; // The time unreal lets the simulation of the projectile happen
+	float TeleportSimulationTime;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Teleport")
-	FVector TeleportProjectionExtent = FVector(100, 100, 100); // The tolerance of the nav mesh on all axis I guess
-
-	UPROPERTY()
-	TArray<class USplineMeshComponent*> TeleportPathMeshPool;
+	FVector TeleportProjectionExtent = FVector(10, 10, 10);
 
 	UPROPERTY(EditDefaultsOnly, Category = "Teleport")
 	UStaticMesh* TeleportArchMesh;
@@ -146,21 +125,23 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Teleport")
 	class UMaterialInterface* TeleportArchMaterial;
 
-	UPROPERTY(EditDefaultsOnly, Category="Input")
-	class UInputMappingContext* DefaultMappingContext;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	class UInputAction* MoveAction;
-
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	class UInputAction* RotateAction;
 
-	UPROPERTY (EditDefaultsOnly, Category = "Input")
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	class UInputAction* TeleportLeftAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	class UInputAction* TeleportRightAction;
 
-	// VARIABLES //
+
+private:
+
+	EControllerHand HandTryingToTeleport;
+
+	UPROPERTY()
+	TArray<class USplineMeshComponent*> TeleportPathMeshPool;
+
 	bool bCanTeleport;
+
 };

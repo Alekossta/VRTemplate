@@ -1,26 +1,25 @@
-#include "VRCharacter.h"
-#include "Camera/CameraComponent.h"
-#include "Components/ShapeComponent.h"
-#include "Kismet/GameplayStatics.h"
-#include "Components/ArrowComponent.h"
-#include "HeadMountedDisplayFunctionLibrary.h"
-#include "Components/SplineComponent.h"
-#include "Components/SplineMeshComponent.h"
-#include "NavigationSystem.h"
-#include "Components/CapsuleComponent.h"
+#include "PlayerCharacterVR.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Camera/CameraComponent.h"
+#include "Components/ArrowComponent.h"
+#include "Components/SplineComponent.h"
+#include "Components/SplineMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "HandController.h"
+#include "Components/CapsuleComponent.h"
+#include "NavigationSystem.h"
+#include "HeadMountedDisplayFunctionLibrary.h"
 
-AVRCharacter::AVRCharacter()
+APlayerCharacterVR::APlayerCharacterVR()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
 	VRRoot = CreateDefaultSubobject<USceneComponent>(TEXT("VRRoot"));
 	VRRoot->SetupAttachment(GetRootComponent());
 
-	VRCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("VRCamera"));
-	VRCamera->SetupAttachment(VRRoot);
+	Camera->SetupAttachment(VRRoot);
 
 	Orientation = CreateDefaultSubobject<UArrowComponent>(TEXT("Orientation Arrow"));
 	Orientation->SetupAttachment(GetRootComponent());
@@ -49,28 +48,17 @@ AVRCharacter::AVRCharacter()
 	}
 }
 
-void AVRCharacter::BeginPlay()
+void APlayerCharacterVR::BeginPlay()
 {
 	Super::BeginPlay();
 
 	DestinationMarker->SetVisibility(false);
-	HandTryingToTeleport = EHand::None;
+	HandTryingToTeleport = EControllerHand::AnyHand;
 
 	// Hide all teleport path spline meshes
 	for (USplineMeshComponent* SplineMesh : TeleportPathMeshPool)
 	{
 		SplineMesh->SetVisibility(false);
-	}
-
-	SpawnHands();
-
-	// Setup Enhanced Input contexts
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			Subsystem->AddMappingContext(DefaultMappingContext, 0);
-		}
 	}
 
 	// Not really sure about this one
@@ -89,63 +77,50 @@ void AVRCharacter::BeginPlay()
 	}
 }
 
-void AVRCharacter::SpawnHands()
+void APlayerCharacterVR::SpawnHands()
 {
-	HandControllerLeft = GetWorld()->SpawnActor<AHandController>(HandControllerClassL);
-	if (HandControllerLeft != nullptr)
-	{
-		HandControllerLeft->SetTrackingSource(EControllerHand::Left);
-		HandControllerLeft->SetOwner(this);
-		HandControllerLeft->AttachToComponent(VRRoot, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	}
-
-	HandControllerRight = GetWorld()->SpawnActor<AHandController>(HandControllerClassR);
-	if (HandControllerRight != nullptr)
-	{
-		HandControllerRight->SetTrackingSource(EControllerHand::Right);
-		HandControllerRight->SetOwner(this);
-		HandControllerRight->AttachToComponent(VRRoot, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	}
+	HandsOwner = VRRoot;
+	Super::SpawnHands();
 }
 
-void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void APlayerCharacterVR::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AVRCharacter::Move);
-		EnhancedInputComponent->BindAction(RotateAction, ETriggerEvent::Started, this, &AVRCharacter::Rotate);
-		EnhancedInputComponent->BindAction(TeleportLeftAction, ETriggerEvent::Started, this, &AVRCharacter::ThumbstickPressedLeft);
-		EnhancedInputComponent->BindAction(TeleportLeftAction, ETriggerEvent::Completed, this, &AVRCharacter::ThumbstickReleasedLeft);
-		EnhancedInputComponent->BindAction(TeleportRightAction, ETriggerEvent::Started, this, &AVRCharacter::ThumbstickPressedRight);
-		EnhancedInputComponent->BindAction(TeleportRightAction, ETriggerEvent::Completed, this, &AVRCharacter::ThumbstickReleasedRight);
+		EnhancedInputComponent->BindAction(RotateAction, ETriggerEvent::Started, this, &APlayerCharacterVR::Rotate);
+		EnhancedInputComponent->BindAction(TeleportLeftAction, ETriggerEvent::Started, this, &APlayerCharacterVR::ThumbstickPressedLeft);
+		EnhancedInputComponent->BindAction(TeleportLeftAction, ETriggerEvent::Completed, this, &APlayerCharacterVR::ThumbstickReleasedLeft);
+		EnhancedInputComponent->BindAction(TeleportRightAction, ETriggerEvent::Started, this, &APlayerCharacterVR::ThumbstickPressedRight);
+		EnhancedInputComponent->BindAction(TeleportRightAction, ETriggerEvent::Completed, this, &APlayerCharacterVR::ThumbstickReleasedRight);
 	}
 }
 
-void AVRCharacter::Tick(float DeltaTime)
+void APlayerCharacterVR::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	KeepCameraAndCapsuleTogether();
 	UpdateDestinationMarker();
 }
 
-void AVRCharacter::KeepCameraAndCapsuleTogether()
+void APlayerCharacterVR::KeepCameraAndCapsuleTogether()
 {
-	if (VRCamera == nullptr || GetArrowComponent() == nullptr) return; // Do some pointer checks
+	if (Camera == nullptr || GetArrowComponent() == nullptr) return; // Do some pointer checks
 
 	// Make arrow of character to follow camera z axis rotation so that we have an orientation reference
-	float RotationYaw = VRCamera->GetComponentRotation().Yaw;
+	float RotationYaw = Camera->GetComponentRotation().Yaw;
 	FRotator Rotation = FRotator(Orientation->GetComponentRotation().Pitch, RotationYaw,
 		Orientation->GetComponentRotation().Roll);
 	Orientation->SetWorldRotation(Rotation);
 
-	FVector CameraOffsetPerFrame = VRCamera->GetComponentLocation() - GetActorLocation();
+	FVector CameraOffsetPerFrame = Camera->GetComponentLocation() - GetActorLocation();
 	CameraOffsetPerFrame.Z = 0; // Dont align z cause the capsule would move up and down with the headset
 	AddActorWorldOffset(CameraOffsetPerFrame, true);
 	if (VRRoot == nullptr) return;
 	VRRoot->AddWorldOffset(-CameraOffsetPerFrame, true);
 }
 
-void AVRCharacter::FinishTeleport()
+void APlayerCharacterVR::FinishTeleport()
 {
 	DestinationMarker->SetVisibility(false);
 	TArray<FVector> EmptyPath;
@@ -158,7 +133,7 @@ void AVRCharacter::FinishTeleport()
 }
 
 
-void AVRCharacter::Teleport()
+void APlayerCharacterVR::Teleport()
 {
 	FVector Destination = DestinationMarker->GetComponentLocation();
 	Destination += GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * GetActorUpVector();
@@ -168,10 +143,10 @@ void AVRCharacter::Teleport()
 	FinishTeleport();
 }
 
-void AVRCharacter::UpdateDestinationMarker()
+void APlayerCharacterVR::UpdateDestinationMarker()
 {
 	// dont't update the destination marker if not needed
-	if (MovementWay == EMovementWay::Walking || HandTryingToTeleport == EHand::None) return; 
+	if (MovementWay == EMovementWay::Walking || HandTryingToTeleport == EControllerHand::AnyHand) return;
 
 	TArray<FVector> PathToDestination;
 	FVector TeleportDestination;
@@ -191,14 +166,14 @@ void AVRCharacter::UpdateDestinationMarker()
 	}
 }
 
-bool AVRCharacter::FindTeleportDestination(TArray<FVector>& OutPath, FVector& OutLocation)
+bool APlayerCharacterVR::FindTeleportDestination(TArray<FVector>& OutPath, FVector& OutLocation)
 {
 	FVector Start;
 	FVector Direction;
 	FVector End;
 	switch (HandTryingToTeleport)
 	{
-		case EHand::Left:
+		case EControllerHand::Left:
 		{
 			Start = HandControllerLeft->GetActorLocation();
 			End = HandControllerLeft->GetActorLocation();
@@ -207,7 +182,7 @@ bool AVRCharacter::FindTeleportDestination(TArray<FVector>& OutPath, FVector& Ou
 			HandControllerRight->SetShowHand(true);
 			break;
 		}
-		case EHand::Right:
+		case EControllerHand::Right:
 		{
 			Start = HandControllerRight->GetActorLocation();
 			End = HandControllerRight->GetActorLocation();
@@ -242,7 +217,7 @@ bool AVRCharacter::FindTeleportDestination(TArray<FVector>& OutPath, FVector& Ou
 	return true;
 }
 
-void AVRCharacter::DrawTeleportPath(const TArray<FVector>& Path)
+void APlayerCharacterVR::DrawTeleportPath(const TArray<FVector>& Path)
 {
 	UpdateSpline(Path);
 
@@ -276,7 +251,7 @@ void AVRCharacter::DrawTeleportPath(const TArray<FVector>& Path)
 	}
 }
 
-void AVRCharacter::UpdateSpline(const TArray<FVector>& Path)
+void APlayerCharacterVR::UpdateSpline(const TArray<FVector>& Path)
 {
 	TeleportPath->ClearSplinePoints(false);
 	for (int32 i = 0; i < Path.Num(); ++i)
@@ -290,69 +265,70 @@ void AVRCharacter::UpdateSpline(const TArray<FVector>& Path)
 }
 
 
-void AVRCharacter::ThumbstickPressedLeft(const FInputActionValue& Value)
+void APlayerCharacterVR::ThumbstickPressedLeft(const FInputActionValue& Value)
 {
-	HandTryingToTeleport = EHand::Left;
+	HandTryingToTeleport = EControllerHand::Left;
 }
 
-void AVRCharacter::ThumbstickReleasedLeft(const FInputActionValue& Value)
+void APlayerCharacterVR::ThumbstickReleasedLeft(const FInputActionValue& Value)
 {
-	if (HandTryingToTeleport == EHand::Left)
+	if (HandTryingToTeleport == EControllerHand::Left)
 	{
-		HandTryingToTeleport = EHand::None;
+		HandTryingToTeleport = EControllerHand::AnyHand;
 		if (!bCanTeleport) return;
 		Teleport();
 	}
 }
 
-void AVRCharacter::ThumbstickPressedRight(const FInputActionValue& Value)
+void APlayerCharacterVR::ThumbstickPressedRight(const FInputActionValue& Value)
 {
-	HandTryingToTeleport = EHand::Right;
+	HandTryingToTeleport = EControllerHand::Right;
 }
 
-void AVRCharacter::ThumbstickReleasedRight(const FInputActionValue& Value)
+void APlayerCharacterVR::ThumbstickReleasedRight(const FInputActionValue& Value)
 {
-	if (HandTryingToTeleport == EHand::Right)
+	if (HandTryingToTeleport == EControllerHand::Right)
 	{
-		HandTryingToTeleport = EHand::None;
+		HandTryingToTeleport = EControllerHand::AnyHand;
 		if (!bCanTeleport) return;
 		Teleport();
 	}
 }
 
-void AVRCharacter::Move(const FInputActionValue& Value)
+void APlayerCharacterVR::Move(const FInputActionValue& Value)
 {
+	APlayerCharacter::Move(Value);
 	if (MovementWay != EMovementWay::Teleport)
 	{
 		FVector2D MovementVector = Value.Get<FVector2D>();
 
 		switch (WalkingOrientation)
 		{
-			case EWalkingOrientation::HMD:
-			{
-				FVector CameraForward = Orientation->GetForwardVector();
-				FVector CameraRight = Orientation->GetRightVector();
-				AddMovementInput(CameraForward, MovementVector.Y);
-				AddMovementInput(CameraRight, MovementVector.X);
-				break;
-			}
-			case EWalkingOrientation::LeftHand:
-			{
-				AddMovementInput(HandControllerLeft->GetActorForwardVector(), MovementVector.Y);
-				AddMovementInput(HandControllerLeft->GetActorRightVector(), MovementVector.X);
-				break;
-			}
-			case EWalkingOrientation::RightHand:
-			{
-				AddMovementInput(HandControllerRight->GetActorForwardVector(), MovementVector.Y);
-				AddMovementInput(HandControllerRight->GetActorRightVector(), MovementVector.X);
-				break;
-			}
+		case EWalkingOrientation::HMD:
+		{
+			FVector CameraForward = Orientation->GetForwardVector();
+			FVector CameraRight = Orientation->GetRightVector();
+			AddMovementInput(CameraForward, MovementVector.Y);
+			AddMovementInput(CameraRight, MovementVector.X);
+			break;
+		}
+		case EWalkingOrientation::LeftHand:
+		{
+			AddMovementInput(HandControllerLeft->GetActorForwardVector(), MovementVector.Y);
+			AddMovementInput(HandControllerLeft->GetActorRightVector(), MovementVector.X);
+			break;
+		}
+		case EWalkingOrientation::RightHand:
+		{
+			AddMovementInput(HandControllerRight->GetActorForwardVector(), MovementVector.Y);
+			AddMovementInput(HandControllerRight->GetActorRightVector(), MovementVector.X);
+			break;
+		}
 		}
 	}
 }
 
-void AVRCharacter::Rotate(const FInputActionValue& Value)
+void APlayerCharacterVR::Rotate(const FInputActionValue& Value)
 {
 	float RotateAmount = Value.Get<float>();
 	if (Controller)

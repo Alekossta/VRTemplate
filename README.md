@@ -10,11 +10,13 @@ VR template for Unreal Engine 5.
 
 ## Features
 
-- VR Character with basic locomotion (moving, turning), collision capsule aligning with camera, teleporting
-- Basic vr hands
+- VR Character with basic locomotion (moving, turning), collision capsule aligning with camera
+- Teleporting
+- Basic VR hands
 - Configured settings for VR based on Unreal Documentation
 - All in C++
 - New input system
+- First person character for testing
 
 ## Notes / Tips
 
@@ -23,7 +25,12 @@ VR template for Unreal Engine 5.
 ## Install instructions
 
 1. git clone https://github.com/Alekossta/VRTemplate
-(optional)
-2. git lfs fetch 
-3. git lfs checkout
+2. launch .uproject
+
+
+## Architecture
+
+- PlayerCharacter
+    - PlayerCharacterVR
+    - PlayerCharacterFPS (for testing)
 
