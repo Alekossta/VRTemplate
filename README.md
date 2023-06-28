@@ -13,6 +13,7 @@ VR template for Unreal Engine 5.
 - VR Character with basic locomotion (moving, turning), collision capsule aligning with camera
 - Teleporting
 - Basic VR hands
+- Basis grabbing functionality
 - Configured settings for VR based on Unreal Documentation
 - All in C++
 - New input system
