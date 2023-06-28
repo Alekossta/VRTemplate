@@ -32,6 +32,18 @@ protected:
 
 	virtual void SpawnHands();
 
+	UFUNCTION()
+	void GrabLeft();
+
+	UFUNCTION()
+	void GrabRight();
+
+	UFUNCTION()
+	void ReleaseLeft();
+
+	UFUNCTION()
+	void ReleaseRight();
+
 
 	// PROPERTIES // 
 
@@ -46,6 +58,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	class UInputAction* MoveAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	class UInputAction* GripRightAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	class UInputAction* GripLeftAction;
 
 	// VARIABLES //
 

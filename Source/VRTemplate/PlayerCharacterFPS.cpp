@@ -1,6 +1,7 @@
 #include "PlayerCharacterFPS.h"
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
+#include "HandController.h"
 #include "EnhancedInputSubsystems.h"
 #include "Components/CapsuleComponent.h"
 
@@ -24,6 +25,9 @@ void APlayerCharacterFPS::SpawnHands()
 {
 	HandsOwner = Cast<USceneComponent>(Camera);
 	APlayerCharacter::SpawnHands();
+
+	HandControllerLeft->AddActorLocalOffset(FVector(50, -25, -10));
+	HandControllerRight->AddActorLocalOffset(FVector(50, 25, -10));
 }
 
 void APlayerCharacterFPS::Move(const FInputActionValue& Value)

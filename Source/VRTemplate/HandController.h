@@ -24,6 +24,12 @@ public:
 	class UMotionControllerComponent* GetMotionControllerComp();
 	void SetShowHand(bool bShow);
 
+	void TryGrab();
+	void Grab(class UGrabbableComponent* Grabbed);
+	void Release();
+
+	void CheckDistanceWithGrabbed();
+
 private:
 
 	// Components
@@ -33,4 +39,21 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	class USkeletalMeshComponent* HandMesh;
+	
+	UPROPERTY(VisibleAnywhere)
+	class USphereComponent* GrabSphere;
+
+	UPROPERTY(EditDefaultsOnly)
+	float MaxGrabDistance = 25.f;
+
+	UPROPERTY(EditDefaultsOnly)
+	float GrabOffset = 5.0f;
+
+	UPROPERTY(EditDefaultsOnly)
+	float GrabRadius = 3.0f;
+
+	// Variables
+
+	bool bIsGrabbing = false;
+	class UGrabbableComponent* GrabbedComponent = nullptr;
 };

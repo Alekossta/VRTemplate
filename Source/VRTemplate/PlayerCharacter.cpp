@@ -58,6 +58,10 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Move);
+		EnhancedInputComponent->BindAction(GripRightAction, ETriggerEvent::Started, this, &APlayerCharacter::GrabRight);
+		EnhancedInputComponent->BindAction(GripRightAction, ETriggerEvent::Completed, this, &APlayerCharacter::ReleaseRight);
+		EnhancedInputComponent->BindAction(GripLeftAction, ETriggerEvent::Started, this, &APlayerCharacter::GrabLeft);
+		EnhancedInputComponent->BindAction(GripLeftAction, ETriggerEvent::Completed, this, &APlayerCharacter::ReleaseLeft);
 	}
 }
 
@@ -69,4 +73,36 @@ void APlayerCharacter::Tick(float DeltaTime)
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
 
+}
+
+void APlayerCharacter::GrabLeft()
+{
+	if (HandControllerLeft != nullptr)
+	{
+		HandControllerLeft->TryGrab();
+	}
+}
+
+void APlayerCharacter::GrabRight()
+{
+	if (HandControllerRight != nullptr)
+	{
+		HandControllerRight->TryGrab();
+	}
+}
+
+void APlayerCharacter::ReleaseLeft()
+{
+	if (HandControllerLeft != nullptr)
+	{
+		HandControllerLeft->Release();
+	}
+}
+
+void APlayerCharacter::ReleaseRight()
+{
+	if (HandControllerRight != nullptr)
+	{
+		HandControllerRight->Release();
+	}
 }

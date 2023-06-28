@@ -1,5 +1,8 @@
 #include "HandController.h"
 #include "MotionControllerComponent.h"
+#include "Components/SphereComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "GrabbableComponent.h"
 
 AHandController::AHandController()
 {
@@ -20,6 +23,93 @@ void AHandController::BeginPlay()
 void AHandController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	CheckDistanceWithGrabbed();
+}
+
+void AHandController::CheckDistanceWithGrabbed()
+{
+	if (!GrabbedComponent) return;
+
+	FVector HandLocation = GetActorLocation();
+	FVector GrabbedLocation = GrabbedComponent->GetOwner()->GetActorLocation();
+	float Distance = FVector::Dist(HandLocation, GrabbedLocation);
+	if (Distance > MaxGrabDistance)
+	{
+		Release();
+	}
+}
+
+void AHandController::TryGrab()
+{
+	FVector Direction = MotionController->GetTrackingSource() == EControllerHand::Left ? GetActorRightVector() : -GetActorRightVector();
+	FVector SphereOrigin = GetActorLocation() + Direction * GrabOffset;
+	float SphereRadius = GrabRadius;
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;  // Array of object types to collide with
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldDynamic));
+
+	// Array to store the hit results
+	TArray<FHitResult> OutHits;
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(GetOwner());  // Ignore the owner of this actor (the player)
+
+	bool bHit = UKismetSystemLibrary::SphereTraceMultiForObjects(
+		GetWorld(),
+		SphereOrigin,
+		SphereOrigin,
+		SphereRadius,
+		ObjectTypes,
+		false,  // bTraceComplex
+		TArray<AActor*>(),  // Ignore Actors (empty array in this case)
+		EDrawDebugTrace::None,  // DrawDebugType (for visualization, optional)
+		OutHits,
+		true  // bIgnoreSelf
+	);
+
+	if (bHit)
+	{
+		// find actor closest to the hand
+		float ClosestDistance = 1000000.f;
+		AActor* ClosestActor = nullptr;
+		for (auto& Hit : OutHits)
+		{
+			if (Hit.GetActor() != nullptr)
+			{
+				float Distance = FVector::Dist(Hit.GetActor()->GetActorLocation(), GetActorLocation());
+				if (Distance < ClosestDistance)
+				{
+					ClosestDistance = Distance;
+					ClosestActor = Hit.GetActor();
+				}
+			}
+		}
+
+		UGrabbableComponent* Grabbable = ClosestActor->FindComponentByClass<UGrabbableComponent>();
+		if (Grabbable != nullptr)
+		{
+			Grab(Grabbable);
+		}
+	}
+}
+
+void AHandController::Grab(class UGrabbableComponent* Grabbed)
+{
+	GrabbedComponent = Grabbed;
+	GrabbedComponent->Grab(this);
+	bIsGrabbing = true;
+}
+
+void AHandController::Release()
+{
+	if (bIsGrabbing)
+	{
+		if (GrabbedComponent != nullptr)
+		{	
+			GrabbedComponent->Release(this);
+			GrabbedComponent = nullptr;
+			bIsGrabbing = false;
+		}
+	}
 }
 
 void AHandController::SetTrackingSource (EControllerHand HandToSet)
