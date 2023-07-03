@@ -28,8 +28,6 @@ public:
 	void Grab(class UGrabbableComponent* Grabbed);
 	void Release();
 
-	void CheckDistanceWithGrabbed();
-
 private:
 
 	// Components

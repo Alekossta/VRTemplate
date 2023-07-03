@@ -23,20 +23,6 @@ void AHandController::BeginPlay()
 void AHandController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	CheckDistanceWithGrabbed();
-}
-
-void AHandController::CheckDistanceWithGrabbed()
-{
-	if (!GrabbedComponent) return;
-
-	FVector HandLocation = GetActorLocation();
-	FVector GrabbedLocation = GrabbedComponent->GetOwner()->GetActorLocation();
-	float Distance = FVector::Dist(HandLocation, GrabbedLocation);
-	if (Distance > MaxGrabDistance)
-	{
-		Release();
-	}
 }
 
 void AHandController::TryGrab()
@@ -94,9 +80,18 @@ void AHandController::TryGrab()
 
 void AHandController::Grab(class UGrabbableComponent* Grabbed)
 {
+	if (Grabbed->IsOneHanded())
+	{
+		for (auto& Hand : Grabbed->GetGrabberHands())
+		{
+			Hand->Release();
+		}
+	}
+
 	GrabbedComponent = Grabbed;
 	GrabbedComponent->Grab(this);
 	bIsGrabbing = true;
+	SetShowHand(false);
 }
 
 void AHandController::Release()
@@ -108,6 +103,7 @@ void AHandController::Release()
 			GrabbedComponent->Release(this);
 			GrabbedComponent = nullptr;
 			bIsGrabbing = false;
+			SetShowHand(true);
 		}
 	}
 }

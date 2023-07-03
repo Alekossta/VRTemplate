@@ -24,10 +24,16 @@ protected:
 
 	TArray<class AHandController*> GrabberHands;
 
+	UPROPERTY(EditAnywhere)
+	bool bOneHanded = true;
+
 public:	
 	
 	virtual void Grab(class AHandController* Hand);
 	virtual void Release(class AHandController* Hand);
+
+	TArray <class AHandController*> GetGrabberHands() const { return GrabberHands; }
+	bool IsOneHanded() const { return bOneHanded; }
 
 	UPROPERTY(BlueprintAssignable)
 	FOnGrabbed OnGrabbed;
