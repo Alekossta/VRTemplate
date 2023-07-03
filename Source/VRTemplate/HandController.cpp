@@ -46,7 +46,7 @@ void AHandController::TryGrab()
 		SphereRadius,
 		ObjectTypes,
 		false,  // bTraceComplex
-		TArray<AActor*>(),  // Ignore Actors (empty array in this case)
+		ActorsToIgnore,  // Ignore Actors (empty array in this case)
 		EDrawDebugTrace::None,  // DrawDebugType (for visualization, optional)
 		OutHits,
 		true  // bIgnoreSelf

@@ -3,6 +3,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "HandController.h"
+#include "Components/CapsuleComponent.h"
 
 
 APlayerCharacter::APlayerCharacter()
@@ -12,6 +13,8 @@ APlayerCharacter::APlayerCharacter()
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("VRCamera"));
 	Camera->SetupAttachment(GetRootComponent());
 	Camera->FieldOfView = 110.f;
+
+	GetCapsuleComponent()->SetCapsuleRadius(7.f);
 }
 
 void APlayerCharacter::BeginPlay()
