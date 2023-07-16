@@ -33,6 +33,7 @@ void AHandController::TryGrab()
 	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;  // Array of object types to collide with
 	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
 	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldDynamic));
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_PhysicsBody));
 
 	// Array to store the hit results
 	TArray<FHitResult> OutHits;

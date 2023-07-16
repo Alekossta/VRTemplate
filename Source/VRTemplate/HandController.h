@@ -37,9 +37,6 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	class USkeletalMeshComponent* HandMesh;
-	
-	UPROPERTY(VisibleAnywhere)
-	class USphereComponent* GrabSphere;
 
 	UPROPERTY(EditDefaultsOnly)
 	float MaxGrabDistance = 25.f;
