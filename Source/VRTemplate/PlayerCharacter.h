@@ -44,6 +44,18 @@ protected:
 	UFUNCTION()
 	void ReleaseRight();
 
+	UFUNCTION()
+	void ActivateRight();
+
+	UFUNCTION()
+	void DeactivateRight();
+
+	UFUNCTION()
+	void ActivateLeft();
+
+	UFUNCTION()
+	void DeactivateLeft();
+
 
 	// PROPERTIES // 
 
@@ -64,6 +76,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	class UInputAction* GripLeftAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	class UInputAction* ActivateRightAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	class UInputAction* ActivateLeftAction;
 
 	// VARIABLES //
 

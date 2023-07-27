@@ -65,6 +65,11 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(GripRightAction, ETriggerEvent::Completed, this, &APlayerCharacter::ReleaseRight);
 		EnhancedInputComponent->BindAction(GripLeftAction, ETriggerEvent::Started, this, &APlayerCharacter::GrabLeft);
 		EnhancedInputComponent->BindAction(GripLeftAction, ETriggerEvent::Completed, this, &APlayerCharacter::ReleaseLeft);
+		
+		EnhancedInputComponent->BindAction(ActivateRightAction, ETriggerEvent::Started, this, &APlayerCharacter::ActivateRight);
+		EnhancedInputComponent->BindAction(ActivateRightAction, ETriggerEvent::Completed, this, &APlayerCharacter::DeactivateRight);
+		EnhancedInputComponent->BindAction(ActivateLeftAction, ETriggerEvent::Started, this, &APlayerCharacter::ActivateLeft);
+		EnhancedInputComponent->BindAction(ActivateLeftAction, ETriggerEvent::Completed, this, &APlayerCharacter::DeactivateLeft);
 	}
 }
 
@@ -82,7 +87,7 @@ void APlayerCharacter::GrabLeft()
 {
 	if (HandControllerLeft != nullptr)
 	{
-		HandControllerLeft->TryGrab();
+		HandControllerLeft->Grab();
 	}
 }
 
@@ -90,7 +95,7 @@ void APlayerCharacter::GrabRight()
 {
 	if (HandControllerRight != nullptr)
 	{
-		HandControllerRight->TryGrab();
+		HandControllerRight->Grab();
 	}
 }
 
@@ -107,5 +112,37 @@ void APlayerCharacter::ReleaseRight()
 	if (HandControllerRight != nullptr)
 	{
 		HandControllerRight->Release();
+	}
+}
+
+void APlayerCharacter::ActivateRight()
+{
+	if (HandControllerRight)
+	{
+		HandControllerRight->Activate();
+	}
+}
+
+void APlayerCharacter::DeactivateRight()
+{
+	if (HandControllerRight)
+	{
+		HandControllerRight->Deactivate();
+	}
+}
+
+void APlayerCharacter::ActivateLeft()
+{
+	if (HandControllerLeft)
+	{
+		HandControllerLeft->Activate();
+	}
+}
+
+void APlayerCharacter::DeactivateLeft()
+{
+	if (HandControllerLeft)
+	{
+		HandControllerLeft->Deactivate();
 	}
 }

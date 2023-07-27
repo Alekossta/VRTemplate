@@ -2,17 +2,20 @@
 #include "MotionControllerComponent.h"
 #include "Components/SphereComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "GrabbableComponent.h"
+#include "GrabbableStaticMeshComponent.h"
 
 AHandController::AHandController()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	MotionController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("Motion Controller"));
+	MotionController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("MotionController"));
 	SetRootComponent(MotionController);
 
-	HandMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Hand Mesh"));
+	HandMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HandMesh"));
 	HandMesh->SetupAttachment(MotionController);
+
+	GripPoint = CreateDefaultSubobject<USceneComponent>(TEXT("GripPoint"));
+	GripPoint->SetupAttachment(HandMesh);
 }
 
 void AHandController::BeginPlay()
@@ -23,10 +26,14 @@ void AHandController::BeginPlay()
 void AHandController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	HandleVelocity();
 }
 
-void AHandController::TryGrab()
+
+void AHandController::Grab()
 {
+	if (!MotionController) return;
+
 	FVector Direction = MotionController->GetTrackingSource() == EControllerHand::Left ? GetActorRightVector() : -GetActorRightVector();
 	FVector SphereOrigin = GetActorLocation() + Direction * GrabOffset;
 	float SphereRadius = GrabRadius;
@@ -55,44 +62,36 @@ void AHandController::TryGrab()
 
 	if (bHit)
 	{
-		// find actor closest to the hand
+
+		// find component closest to the hand
 		float ClosestDistance = 1000000.f;
-		AActor* ClosestActor = nullptr;
+		UGrabbableStaticMeshComponent* ClosestGrabbable = nullptr;
 		for (auto& Hit : OutHits)
 		{
-			if (Hit.GetActor() != nullptr)
+			if (Hit.GetComponent() != nullptr)
 			{
-				float Distance = FVector::Dist(Hit.GetActor()->GetActorLocation(), GetActorLocation());
-				if (Distance < ClosestDistance)
+				UGrabbableStaticMeshComponent* Grabbable = Cast<UGrabbableStaticMeshComponent>(Hit.GetComponent());
+				if (Grabbable)
 				{
-					ClosestDistance = Distance;
-					ClosestActor = Hit.GetActor();
+					float Distance = FVector::Dist(Hit.GetComponent()->GetComponentLocation(), GetActorLocation());
+					if (Distance < ClosestDistance)
+					{
+
+						ClosestDistance = Distance;
+						ClosestGrabbable = Grabbable;
+					}
 				}
 			}
 		}
 
-		UGrabbableComponent* Grabbable = ClosestActor->FindComponentByClass<UGrabbableComponent>();
-		if (Grabbable != nullptr)
+		if (ClosestGrabbable)
 		{
-			Grab(Grabbable);
+			GrabbedComponent = ClosestGrabbable;
+			GrabbedComponent->GrabStart(this);
+			bIsGrabbing = true;
+			SetShowHand(false);
 		}
 	}
-}
-
-void AHandController::Grab(class UGrabbableComponent* Grabbed)
-{
-	if (Grabbed->IsOneHanded())
-	{
-		for (auto& Hand : Grabbed->GetGrabberHands())
-		{
-			Hand->Release();
-		}
-	}
-
-	GrabbedComponent = Grabbed;
-	GrabbedComponent->Grab(this);
-	bIsGrabbing = true;
-	SetShowHand(false);
 }
 
 void AHandController::Release()
@@ -100,8 +99,8 @@ void AHandController::Release()
 	if (bIsGrabbing)
 	{
 		if (GrabbedComponent != nullptr)
-		{	
-			GrabbedComponent->Release(this);
+		{
+			GrabbedComponent->GrabEnd(this);
 			GrabbedComponent = nullptr;
 			bIsGrabbing = false;
 			SetShowHand(true);
@@ -109,7 +108,7 @@ void AHandController::Release()
 	}
 }
 
-void AHandController::SetTrackingSource (EControllerHand HandToSet)
+void AHandController::SetTrackingSource(EControllerHand HandToSet)
 {
 	if (MotionController == nullptr) return;
 	MotionController->SetTrackingSource(HandToSet);
@@ -117,10 +116,47 @@ void AHandController::SetTrackingSource (EControllerHand HandToSet)
 
 void AHandController::SetShowHand(bool bShow)
 {
-	HandMesh->SetVisibility(bShow);
+	if (HandMesh)
+	{
+		HandMesh->SetVisibility(bShow);
+	}
 }
 
 UMotionControllerComponent* AHandController::GetMotionControllerComp()
 {
 	return MotionController;
+}
+
+FVector AHandController::GetMotionVelocity() const
+{
+	return Velocity;
+}
+
+void AHandController::HandleVelocity()
+{
+	CurrentLocation = GetActorLocation();
+	Velocity = (CurrentLocation - PrevLocation) / GetWorld()->GetDeltaSeconds();
+	PrevLocation = CurrentLocation;
+}
+
+void AHandController::Activate()
+{
+	if (bIsGrabbing)
+	{
+		if (GrabbedComponent)
+		{
+			GrabbedComponent->ActivateStart(this);
+		}
+	}
+}
+
+void AHandController::Deactivate()
+{
+	if (bIsGrabbing)
+	{
+		if (GrabbedComponent)
+		{
+			GrabbedComponent->ActivateEnd(this);
+		}
+	}
 }

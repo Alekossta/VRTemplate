@@ -128,8 +128,15 @@ void APlayerCharacterVR::FinishTeleport()
 	DrawTeleportPath(EmptyPath);
 	bCanTeleport = false;
 
-	HandControllerLeft->SetShowHand(true);
-	HandControllerRight->SetShowHand(true);
+	if (HandControllerLeft)
+	{
+		HandControllerLeft->SetShowHand(true);
+	}
+
+	if (HandControllerRight)
+	{
+		HandControllerRight->SetShowHand(true);
+	}
 }
 
 
@@ -175,6 +182,7 @@ bool APlayerCharacterVR::FindTeleportDestination(TArray<FVector>& OutPath, FVect
 	{
 		case EControllerHand::Left:
 		{
+			if (!HandControllerLeft) return false;
 			Start = HandControllerLeft->GetActorLocation();
 			End = HandControllerLeft->GetActorLocation();
 			Direction = HandControllerLeft->GetActorForwardVector();
@@ -184,6 +192,7 @@ bool APlayerCharacterVR::FindTeleportDestination(TArray<FVector>& OutPath, FVect
 		}
 		case EControllerHand::Right:
 		{
+			if (!HandControllerRight) return false;
 			Start = HandControllerRight->GetActorLocation();
 			End = HandControllerRight->GetActorLocation();
 			Direction = HandControllerRight->GetActorForwardVector();
