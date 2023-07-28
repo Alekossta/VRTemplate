@@ -26,7 +26,8 @@ VR template for Unreal Engine 5.
 ## Install instructions
 
 1. git clone https://github.com/Alekossta/VRTemplate
-2. launch .uproject
+2. (optional) you can rename the project with [renom](https://github.com/UnrealisticDev/Renom).
+3. launch .uproject
 
 ## Architecture
 
